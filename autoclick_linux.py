@@ -1,6 +1,6 @@
 """Linux X11 autoclicker. Background mode never moves the pointer.
 
-Key 1 adds a target point (up to --points, default 2; pressing 1 again after
+Key 1 adds a target point (up to --points, default 3; pressing 1 again after
 the last point starts over), key 2 pauses/resumes, key 3 exits. These are the
 top-row number keys and are read globally, so typing them anywhere triggers them. Each cycle clicks
 every point in order with a short gap between them. XSendEvent is not
@@ -42,7 +42,7 @@ def pick_target(root):
         window = pointer.child
 
 
-def run(background, max_points=2):
+def run(background, max_points=3):
     if not os.environ.get('DISPLAY'):
         raise RuntimeError('DISPLAY가 없습니다. 실제 Linux X11 데스크톱의 터미널에서 실행하세요. 현재 터미널이 GUI 세션에 연결되어 있지 않습니다.')
     if os.environ.get('XDG_SESSION_TYPE') == 'wayland':
@@ -153,7 +153,7 @@ def run(background, max_points=2):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--background', action='store_true', help='마우스 이동 없이 X11 창에 이벤트 전송')
-    parser.add_argument('--points', type=int, default=2, help='1번 키로 지정할 클릭 위치 개수 (기본 2)')
+    parser.add_argument('--points', type=int, default=3, help='1번 키로 지정할 클릭 위치 개수 (기본 3)')
     args = parser.parse_args()
     if args.points < 1:
         parser.error('--points는 1 이상이어야 합니다.')

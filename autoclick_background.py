@@ -15,7 +15,7 @@ from ctypes import wintypes
 MIN_SEC, MAX_SEC = 4.0, 10.0  # 클릭할 때마다 이 범위에서 무작위 간격(초)
 HOLD_MIN, HOLD_MAX = 0.05, 0.12  # 누르고 떼는 사이 무작위 시간(초)
 JITTER = 5  # 클릭 위치를 지정 좌표에서 x, y 각각 최대 이만큼(픽셀) 무작위로 흔들기
-POINTS = 2  # 클릭할 위치 개수
+POINTS = 3  # 클릭할 위치 개수
 GAP_MIN, GAP_MAX = 0.3, 0.8  # 한 주기 안에서 위치 사이 간격(초)
 
 user32 = ctypes.windll.user32
