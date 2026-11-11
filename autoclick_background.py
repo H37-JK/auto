@@ -1,12 +1,12 @@
 # 백그라운드 자동 클릭기: 마우스 커서를 움직이지 않고 창에 직접 클릭 신호를 보냄
 # 켜 놓은 동안에도 마우스를 자유롭게 쓸 수 있음 (추가 설치 필요 없음)
-#   1 : 지금 마우스가 있는 위치(그 창)를 클릭 위치로 추가 (최대 POINTS곳, 다 찬 뒤 누르면 처음부터)
-#   2 : 일시정지 / 다시 시작
-#   3 : 종료
-#   4 : 지정한 위치 모두 지우기 (처음부터 다시 지정)
-#   (키보드 위쪽 숫자열 키. 전역으로 감지하므로 다른 곳에서 타이핑해도 반응함)
+#   F8 : 지금 마우스가 있는 위치(그 창)를 클릭 위치로 추가 (최대 POINTS곳, 다 찬 뒤 누르면 처음부터)
+#   F9 : 일시정지 / 다시 시작
+#   F10 : 종료
+#   F7 : 지정한 위치 모두 지우기 (처음부터 다시 지정)
+#   (전역으로 감지하므로 다른 창을 쓰고 있어도 반응함)
 # 주의: 클릭할 창을 최소화하면 안 됨 (다른 창 뒤에 가려지는 건 대부분 괜찮음)
-#       창을 옮기거나 크기를 바꾸면 1로 위치를 다시 지정하세요.
+#       창을 옮기거나 크기를 바꾸면 F8로 위치를 다시 지정하세요.
 #       일부 프로그램/게임은 이 방식의 클릭을 무시할 수 있음 -> 그때는 autoclick.py 사용
 import ctypes
 import random
@@ -38,7 +38,7 @@ user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
 user32.GetForegroundWindow.restype = wintypes.HWND
 user32.SetForegroundWindow.argtypes = [wintypes.HWND]
 
-VK_ADD, VK_PAUSE, VK_QUIT, VK_RESET = 0x31, 0x32, 0x33, 0x34  # 숫자 1, 2, 3, 4
+VK_ADD, VK_PAUSE, VK_QUIT, VK_RESET = 0x77, 0x78, 0x79, 0x76  # F8, F9, F10, F7
 WM_MOUSEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP = 0x0200, 0x0201, 0x0202
 MK_LBUTTON = 0x0001
 GA_ROOT = 2
@@ -117,13 +117,13 @@ def main():
     print("=" * 50)
     print(f" 백그라운드 자동 클릭기 ({POINTS}곳, 4~7초 무작위 간격)")
     print("  마우스는 자유롭게 쓰셔도 됩니다")
-    print(f"  1 : 지금 마우스 위치를 클릭 위치로 추가 (최대 {POINTS}곳, 다 찬 뒤 누르면 처음부터)")
-    print("  2 : 일시정지 / 다시 시작")
-    print("  3 : 종료")
-    print("  4 : 위치 모두 지우기")
+    print(f"  F8 : 지금 마우스 위치를 클릭 위치로 추가 (최대 {POINTS}곳, 다 찬 뒤 누르면 처음부터)")
+    print("  F9 : 일시정지 / 다시 시작")
+    print("  F10 : 종료")
+    print("  F7 : 위치 모두 지우기")
     print("  클릭할 창은 최소화하지 마세요")
     print("=" * 50)
-    print("\n첫 번째 클릭할 곳에 마우스를 올리고 1을 누르세요...")
+    print("\n첫 번째 클릭할 곳에 마우스를 올리고 F8을 누르세요...")
 
     for vk in (VK_ADD, VK_PAUSE, VK_QUIT, VK_RESET):
         pressed(vk)  # 이전에 눌린 기록 지우기
@@ -136,11 +136,11 @@ def main():
 
     while True:
         if pressed(VK_QUIT):
-            print("\n3: 종료합니다.")
+            print("\nF10: 종료합니다.")
             break
         if pressed(VK_RESET) and targets:
             targets, step = [], 0
-            print("\n위치를 모두 지웠습니다. 1로 다시 지정하세요.")
+            print("\n위치를 모두 지웠습니다. F8로 다시 지정하세요.")
         if pressed(VK_ADD):
             if len(targets) >= POINTS:
                 targets = []
@@ -157,7 +157,7 @@ def main():
             next_click = time.time() + gap()
 
         if targets and not all(user32.IsWindow(t[0]) for t in targets):
-            print("\n클릭하던 창이 닫혔습니다. 1로 위치를 다시 지정하세요.")
+            print("\n클릭하던 창이 닫혔습니다. F8로 위치를 다시 지정하세요.")
             targets, step = [], 0
 
         if targets and not paused and time.time() >= next_click and not mouse_busy():

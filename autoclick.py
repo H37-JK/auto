@@ -1,9 +1,9 @@
 # 4~7초 무작위 간격으로 지정한 화면 위치들을 순서대로 클릭하는 자동 클릭기 (추가 설치 필요 없음)
-#   1 : 지금 마우스가 있는 위치를 클릭 위치로 추가 (최대 POINTS곳, 다 찬 뒤 누르면 처음부터)
-#   2 : 일시정지 / 다시 시작
-#   3 : 종료
-#   4 : 지정한 위치 모두 지우기 (처음부터 다시 지정)
-#   (키보드 위쪽 숫자열 키. 전역으로 감지하므로 다른 곳에서 타이핑해도 반응함)
+#   F8 : 지금 마우스가 있는 위치를 클릭 위치로 추가 (최대 POINTS곳, 다 찬 뒤 누르면 처음부터)
+#   F9 : 일시정지 / 다시 시작
+#   F10 : 종료
+#   F7 : 지정한 위치 모두 지우기 (처음부터 다시 지정)
+#   (전역으로 감지하므로 다른 창을 쓰고 있어도 반응함)
 #   비상 정지: 마우스를 화면 왼쪽 위 모서리로 밀어 넣기
 import ctypes
 import time
@@ -27,7 +27,7 @@ try:
 except Exception:
     user32.SetProcessDPIAware()
 
-VK_ADD, VK_PAUSE, VK_QUIT, VK_RESET = 0x31, 0x32, 0x33, 0x34  # 숫자 1, 2, 3, 4
+VK_ADD, VK_PAUSE, VK_QUIT, VK_RESET = 0x77, 0x78, 0x79, 0x76  # F8, F9, F10, F7
 LEFTDOWN, LEFTUP = 0x0002, 0x0004
 
 
@@ -60,13 +60,13 @@ def click(x, y):
 def main():
     print("=" * 50)
     print(f" 자동 클릭기 ({POINTS}곳, 4~7초 무작위 간격)")
-    print(f"  1 : 지금 마우스 위치를 클릭 위치로 추가 (최대 {POINTS}곳, 다 찬 뒤 누르면 처음부터)")
-    print("  2 : 일시정지 / 다시 시작")
-    print("  3 : 종료")
-    print("  4 : 위치 모두 지우기")
+    print(f"  F8 : 지금 마우스 위치를 클릭 위치로 추가 (최대 {POINTS}곳, 다 찬 뒤 누르면 처음부터)")
+    print("  F9 : 일시정지 / 다시 시작")
+    print("  F10 : 종료")
+    print("  F7 : 위치 모두 지우기")
     print("  비상정지: 마우스를 화면 왼쪽 위 끝으로")
     print("=" * 50)
-    print("\n첫 번째 클릭할 곳에 마우스를 올리고 1을 누르세요...")
+    print("\n첫 번째 클릭할 곳에 마우스를 올리고 F8을 누르세요...")
 
     for vk in (VK_ADD, VK_PAUSE, VK_QUIT, VK_RESET):
         pressed(vk)  # 이전에 눌린 기록 지우기
@@ -79,11 +79,11 @@ def main():
 
     while True:
         if pressed(VK_QUIT):
-            print("\n3: 종료합니다.")
+            print("\nF10: 종료합니다.")
             break
         if pressed(VK_RESET) and targets:
             targets, step = [], 0
-            print("\n위치를 모두 지웠습니다. 1로 다시 지정하세요.")
+            print("\n위치를 모두 지웠습니다. F8로 다시 지정하세요.")
         if pressed(VK_ADD):
             if len(targets) >= POINTS:
                 targets = []
