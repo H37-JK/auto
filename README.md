@@ -1,12 +1,29 @@
 # 자동 클릭기
 
-Windows에서는 기존 BAT/Python 파일을 그대로 사용합니다.
+모든 OS 공통: 지정한 위치(기본 2곳)를 매 주기(4~10초)마다 1번 → 2번 순서로 클릭하고, 두 클릭 사이 간격은 0.3~0.8초입니다.
+단축키는 키보드 위쪽 숫자열 **1: 위치 추가 / 2: 일시정지·재개 / 3: 종료** 이고, 전역으로 감지하므로 실행 중에 다른 곳에서 1/2/3을 입력해도 반응합니다.
+
+## Windows
+
+추가 설치 없이 Python만 있으면 됩니다.
+
+- `자동클릭 실행.bat`: 마우스를 실제로 움직여 클릭 (`autoclick.py`)
+- `자동클릭 백그라운드 실행.bat`: 마우스를 움직이지 않고 창에 클릭 신호를 보냄 (`autoclick_background.py`)
+- 위치 개수는 각 파일 위쪽의 `POINTS = 2` 를 바꾸면 됩니다.
+
+## macOS
+
+추가 설치 없이 기본 `python3` 로 실행합니다. Finder에서 `자동클릭 실행 (맥).command` 를 더블클릭하거나 터미널에서 `./auto.sh` 를 실행하세요.
+
+- 처음 실행할 때 **시스템 설정 > 개인정보 보호 및 보안** 에서 터미널에 **손쉬운 사용** 과 **입력 모니터링** 권한을 줘야 클릭과 1/2/3 키가 동작합니다. 권한을 준 뒤 터미널을 다시 실행하세요.
+- 맥에는 백그라운드 모드가 없고, 마우스를 실제로 움직여 클릭한 뒤 원래 위치로 돌려놓습니다. 커서를 화면 왼쪽 위로 옮기면 비상정지합니다.
+- 위치 개수는 `autoclick_mac.py` 위쪽의 `POINTS = 2` 를 바꾸면 됩니다.
 
 ## Linux (X11)
 
 ```bash
 ./setup_linux.sh
-./자동클릭\ 백그라운드\ 실행.sh
+./auto.sh
 # 커서를 이동하는 일반 모드:
 ./자동클릭\ 실행.sh
 ```
@@ -26,7 +43,7 @@ Windows에서는 기존 BAT/Python 파일을 그대로 사용합니다.
 터미널을 닫아도 선택 대기 상태를 유지하려면 같은 X11 데스크톱에서:
 
 ```bash
-nohup ./자동클릭\ 백그라운드\ 실행.sh > autoclick.log 2>&1 &
+nohup ./auto.sh > autoclick.log 2>&1 &
 echo $! # 종료할 때 kill PID
 ```
 
@@ -37,7 +54,7 @@ echo $! # 종료할 때 kill PID
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
 .venv/bin/python -m py_compile autoclick_linux.py
-bash -n setup_linux.sh '자동클릭 실행.sh' '자동클릭 백그라운드 실행.sh'
+bash -n setup_linux.sh '자동클릭 실행.sh' auto.sh '자동클릭 실행 (맥).command'
 ```
 
 실제 클릭 통합 검증은 X11 데스크톱의 테스트 창에서 별도로 해야 합니다.
