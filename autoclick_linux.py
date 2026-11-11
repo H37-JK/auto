@@ -1,6 +1,8 @@
 """Linux X11 autoclicker. Background mode never moves the pointer.
 
-F8 selects a target, F9 pauses/resumes, F10 exits. XSendEvent is not
+F8 adds a target point (up to --points, default 2; pressing F8 again after
+the last point starts over), F9 pauses/resumes, F10 exits. Each cycle clicks
+every point in order with a short gap between them. XSendEvent is not
 accepted by every application. Native Wayland windows are unsupported.
 """
 import argparse
@@ -12,6 +14,7 @@ import time
 MIN_SEC, MAX_SEC = 4.0, 10.0
 HOLD_MIN, HOLD_MAX = 0.05, 0.12
 JITTER = 5
+GAP_MIN, GAP_MAX = 0.3, 0.8
 
 
 def jitter(x, y):
@@ -20,6 +23,13 @@ def jitter(x, y):
 
 def rising_keys(current, previous):
     return current - previous
+
+
+def add_point(points, point, limit):
+    """Append a point; once the list is full, start a new list with it."""
+    if len(points) >= limit:
+        return [point]
+    return points + [point]
 
 
 def pick_target(root):
@@ -31,7 +41,7 @@ def pick_target(root):
         window = pointer.child
 
 
-def run(background):
+def run(background, max_points=2):
     if not os.environ.get('DISPLAY'):
         raise RuntimeError('DISPLAY가 없습니다. 실제 Linux X11 데스크톱의 터미널에서 실행하세요. 현재 터미널이 GUI 세션에 연결되어 있지 않습니다.')
     if os.environ.get('XDG_SESSION_TYPE') == 'wayland':
@@ -60,10 +70,36 @@ def run(background):
             data = connection.query_keymap()
             return {name for name, code in keys.items() if data[code // 8] & (1 << (code % 8))}
 
+        def click(window, x, y):
+            if background:
+                translated = root.translate_coords(window, x, y)
+                fields = dict(time=X.CurrentTime, root=root, window=window,
+                              child=X.NONE, root_x=translated.x, root_y=translated.y,
+                              event_x=x, event_y=y, same_screen=1, detail=1)
+                window.send_event(event.ButtonPress(state=0, **fields), event_mask=X.ButtonPressMask)
+                connection.flush()
+                try:
+                    time.sleep(random.uniform(HOLD_MIN, HOLD_MAX))
+                finally:
+                    window.send_event(event.ButtonRelease(state=X.Button1Mask, **fields), event_mask=X.ButtonReleaseMask)
+                    connection.flush()
+            else:
+                pointer = root.query_pointer()
+                root.warp_pointer(x, y)
+                xtest.fake_input(connection, X.ButtonPress, 1)
+                connection.flush()
+                try:
+                    time.sleep(random.uniform(HOLD_MIN, HOLD_MAX))
+                finally:
+                    xtest.fake_input(connection, X.ButtonRelease, 1)
+                    root.warp_pointer(pointer.root_x, pointer.root_y)
+                    connection.flush()
+            connection.sync()
+
         previous = held()
-        target, paused, next_click, count = None, False, 0.0, 0
+        targets, step, paused, next_click, count = [], 0, False, 0.0, 0
         print(f"Linux X11 {'백그라운드' if background else '일반'} 자동 클릭기", flush=True)
-        print('F8: 위치 지정 / F9: 일시정지·재개 / F10 또는 Ctrl+C: 종료', flush=True)
+        print(f'F8: 위치 추가(최대 {max_points}곳, 다 찬 뒤 누르면 처음부터) / F9: 일시정지·재개 / F10 또는 Ctrl+C: 종료', flush=True)
         print('대상 선택 대기 중. 아직 클릭하지 않습니다.', flush=True)
         while True:
             current = held()
@@ -73,60 +109,41 @@ def run(background):
                 break
             if 'F8' in pressed:
                 if background:
-                    target = pick_target(root)
+                    point = pick_target(root)
                 else:
                     pointer = root.query_pointer()
-                    target = (root, pointer.root_x, pointer.root_y)
+                    point = (root, pointer.root_x, pointer.root_y)
+                targets, step = add_point(targets, point, max_points), 0
                 paused = False
                 next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
-                print(f'대상 선택: 창 {target[0].id:#x}, 좌표 {target[1:]}', flush=True)
-            if 'F9' in pressed and target:
-                paused = not paused
+                print(f'위치 {len(targets)}/{max_points} 선택: 창 {point[0].id:#x}, 좌표 {point[1:]}', flush=True)
+            if 'F9' in pressed and targets:
+                paused, step = not paused, 0
                 next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
                 print('일시정지' if paused else '재개', flush=True)
-            if not background and target:
+            if not background and targets:
                 pointer = root.query_pointer()
                 if pointer.root_x <= 2 and pointer.root_y <= 2:
                     print('왼쪽 위 모서리 비상정지', flush=True)
                     break
-            if target and not paused and time.monotonic() >= next_click:
-                window, x, y = target
+            if targets and not paused and time.monotonic() >= next_click:
+                step %= len(targets)
+                window, x, y = targets[step]
                 try:
-                    if window.get_attributes().map_state != X.IsViewable:
-                        next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
-                        time.sleep(0.03)
-                        continue
-                    x, y = jitter(x, y)
-                    if background:
-                        translated = root.translate_coords(window, x, y)
-                        fields = dict(time=X.CurrentTime, root=root, window=window,
-                                      child=X.NONE, root_x=translated.x, root_y=translated.y,
-                                      event_x=x, event_y=y, same_screen=1, detail=1)
-                        window.send_event(event.ButtonPress(state=0, **fields), event_mask=X.ButtonPressMask)
-                        connection.flush()
-                        try:
-                            time.sleep(random.uniform(HOLD_MIN, HOLD_MAX))
-                        finally:
-                            window.send_event(event.ButtonRelease(state=X.Button1Mask, **fields), event_mask=X.ButtonReleaseMask)
-                            connection.flush()
-                    else:
-                        pointer = root.query_pointer()
-                        root.warp_pointer(x, y)
-                        xtest.fake_input(connection, X.ButtonPress, 1)
-                        connection.flush()
-                        try:
-                            time.sleep(random.uniform(HOLD_MIN, HOLD_MAX))
-                        finally:
-                            xtest.fake_input(connection, X.ButtonRelease, 1)
-                            root.warp_pointer(pointer.root_x, pointer.root_y)
-                            connection.flush()
-                    connection.sync()
-                    count += 1
-                    print(f'클릭 이벤트 전송 {count}회: ({x}, {y})', flush=True)
+                    if window.get_attributes().map_state == X.IsViewable:
+                        x, y = jitter(x, y)
+                        click(window, x, y)
+                        count += 1
+                        print(f'클릭 이벤트 전송 {count}회: 위치 {step + 1} ({x}, {y})', flush=True)
+                    step += 1
                 except error.XError:
-                    target = None
+                    targets, step = [], 0
                     print('대상 창을 사용할 수 없습니다. F8로 다시 선택하세요.', flush=True)
-                next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
+                if 0 < step < len(targets):
+                    next_click = time.monotonic() + random.uniform(GAP_MIN, GAP_MAX)
+                else:
+                    step = 0
+                    next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
             time.sleep(0.03)
     finally:
         connection.close()
@@ -135,9 +152,12 @@ def run(background):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--background', action='store_true', help='마우스 이동 없이 X11 창에 이벤트 전송')
+    parser.add_argument('--points', type=int, default=2, help='F8로 지정할 클릭 위치 개수 (기본 2)')
     args = parser.parse_args()
+    if args.points < 1:
+        parser.error('--points는 1 이상이어야 합니다.')
     try:
-        run(args.background)
+        run(args.background, args.points)
     except KeyboardInterrupt:
         return 0
     except RuntimeError as exc:

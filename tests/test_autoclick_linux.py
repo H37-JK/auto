@@ -24,6 +24,14 @@ class LinuxTests(unittest.TestCase):
             self.assertTrue(95 <= x <= 105)
             self.assertTrue(195 <= y <= 205)
 
+    def test_add_point_fills_then_restarts(self):
+        points = app.add_point([], 'a', 2)
+        self.assertEqual(points, ['a'])
+        points = app.add_point(points, 'b', 2)
+        self.assertEqual(points, ['a', 'b'])
+        self.assertEqual(app.add_point(points, 'c', 2), ['c'])
+        self.assertEqual(app.add_point(['a'], 'b', 1), ['b'])
+
     def test_no_display_fails_without_click(self):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaisesRegex(RuntimeError, 'DISPLAY'):
