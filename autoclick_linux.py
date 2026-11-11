@@ -1,7 +1,7 @@
 """Linux X11 autoclicker. Background mode never moves the pointer.
 
-Key 1 adds a target point (up to --points, default 3; pressing 1 again after
-the last point starts over), key 2 pauses/resumes, key 3 exits. These are the
+Key 1 adds a target point (up to --points, default 6; pressing 1 again after
+the last point starts over), key 2 pauses/resumes, key 3 exits, key 4 clears all points. These are the
 top-row number keys and are read globally, so typing them anywhere triggers them. Each cycle clicks
 every point in order with a short gap between them. XSendEvent is not
 accepted by every application. Native Wayland windows are unsupported.
@@ -12,7 +12,7 @@ import random
 import sys
 import time
 
-MIN_SEC, MAX_SEC = 4.0, 10.0
+MIN_SEC, MAX_SEC = 4.0, 7.0
 HOLD_MIN, HOLD_MAX = 0.05, 0.12
 JITTER = 5
 GAP_MIN, GAP_MAX = 0.3, 0.8
@@ -42,7 +42,7 @@ def pick_target(root):
         window = pointer.child
 
 
-def run(background, max_points=3):
+def run(background, max_points=6):
     if not os.environ.get('DISPLAY'):
         raise RuntimeError('DISPLAY가 없습니다. 실제 Linux X11 데스크톱의 터미널에서 실행하세요. 현재 터미널이 GUI 세션에 연결되어 있지 않습니다.')
     if os.environ.get('XDG_SESSION_TYPE') == 'wayland':
@@ -63,9 +63,9 @@ def run(background, max_points=3):
         root = connection.screen().root
         if not background and not connection.has_extension('XTEST'):
             raise RuntimeError('일반 클릭 모드에는 XTEST 확장이 필요합니다.')
-        keys = {name: connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('1', '2', '3')}
+        keys = {name: connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('1', '2', '3', '4')}
         if not all(keys.values()):
-            raise RuntimeError('1/2/3 키 매핑을 찾지 못했습니다.')
+            raise RuntimeError('1/2/3/4 키 매핑을 찾지 못했습니다.')
 
         def held():
             data = connection.query_keymap()
@@ -100,7 +100,7 @@ def run(background, max_points=3):
         previous = held()
         targets, step, paused, next_click, count = [], 0, False, 0.0, 0
         print(f"Linux X11 {'백그라운드' if background else '일반'} 자동 클릭기", flush=True)
-        print(f'1: 위치 추가(최대 {max_points}곳, 다 찬 뒤 누르면 처음부터) / 2: 일시정지·재개 / 3 또는 Ctrl+C: 종료', flush=True)
+        print(f'1: 위치 추가(최대 {max_points}곳, 다 찬 뒤 누르면 처음부터) / 2: 일시정지·재개 / 3 또는 Ctrl+C: 종료 / 4: 위치 모두 지우기', flush=True)
         print('대상 선택 대기 중. 아직 클릭하지 않습니다.', flush=True)
         while True:
             current = held()
@@ -108,6 +108,9 @@ def run(background, max_points=3):
             previous = current
             if '3' in pressed:
                 break
+            if '4' in pressed and targets:
+                targets, step = [], 0
+                print('위치를 모두 지웠습니다. 1번 키로 다시 지정하세요.', flush=True)
             if '1' in pressed:
                 if background:
                     point = pick_target(root)
@@ -153,7 +156,7 @@ def run(background, max_points=3):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--background', action='store_true', help='마우스 이동 없이 X11 창에 이벤트 전송')
-    parser.add_argument('--points', type=int, default=3, help='1번 키로 지정할 클릭 위치 개수 (기본 3)')
+    parser.add_argument('--points', type=int, default=6, help='1번 키로 지정할 최대 클릭 위치 개수 (기본 6)')
     args = parser.parse_args()
     if args.points < 1:
         parser.error('--points는 1 이상이어야 합니다.')
