@@ -1,7 +1,8 @@
 """Linux X11 autoclicker. Background mode never moves the pointer.
 
-F8 adds a target point (up to --points, default 2; pressing F8 again after
-the last point starts over), F9 pauses/resumes, F10 exits. Each cycle clicks
+Key 1 adds a target point (up to --points, default 2; pressing 1 again after
+the last point starts over), key 2 pauses/resumes, key 3 exits. These are the
+top-row number keys and are read globally, so typing them anywhere triggers them. Each cycle clicks
 every point in order with a short gap between them. XSendEvent is not
 accepted by every application. Native Wayland windows are unsupported.
 """
@@ -62,9 +63,9 @@ def run(background, max_points=2):
         root = connection.screen().root
         if not background and not connection.has_extension('XTEST'):
             raise RuntimeError('일반 클릭 모드에는 XTEST 확장이 필요합니다.')
-        keys = {name: connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('F8', 'F9', 'F10')}
+        keys = {name: connection.keysym_to_keycode(XK.string_to_keysym(name)) for name in ('1', '2', '3')}
         if not all(keys.values()):
-            raise RuntimeError('F8/F9/F10 키 매핑을 찾지 못했습니다.')
+            raise RuntimeError('1/2/3 키 매핑을 찾지 못했습니다.')
 
         def held():
             data = connection.query_keymap()
@@ -99,15 +100,15 @@ def run(background, max_points=2):
         previous = held()
         targets, step, paused, next_click, count = [], 0, False, 0.0, 0
         print(f"Linux X11 {'백그라운드' if background else '일반'} 자동 클릭기", flush=True)
-        print(f'F8: 위치 추가(최대 {max_points}곳, 다 찬 뒤 누르면 처음부터) / F9: 일시정지·재개 / F10 또는 Ctrl+C: 종료', flush=True)
+        print(f'1: 위치 추가(최대 {max_points}곳, 다 찬 뒤 누르면 처음부터) / 2: 일시정지·재개 / 3 또는 Ctrl+C: 종료', flush=True)
         print('대상 선택 대기 중. 아직 클릭하지 않습니다.', flush=True)
         while True:
             current = held()
             pressed = rising_keys(current, previous)
             previous = current
-            if 'F10' in pressed:
+            if '3' in pressed:
                 break
-            if 'F8' in pressed:
+            if '1' in pressed:
                 if background:
                     point = pick_target(root)
                 else:
@@ -117,7 +118,7 @@ def run(background, max_points=2):
                 paused = False
                 next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
                 print(f'위치 {len(targets)}/{max_points} 선택: 창 {point[0].id:#x}, 좌표 {point[1:]}', flush=True)
-            if 'F9' in pressed and targets:
+            if '2' in pressed and targets:
                 paused, step = not paused, 0
                 next_click = time.monotonic() + random.uniform(MIN_SEC, MAX_SEC)
                 print('일시정지' if paused else '재개', flush=True)
@@ -138,7 +139,7 @@ def run(background, max_points=2):
                     step += 1
                 except error.XError:
                     targets, step = [], 0
-                    print('대상 창을 사용할 수 없습니다. F8로 다시 선택하세요.', flush=True)
+                    print('대상 창을 사용할 수 없습니다. 1번 키로 다시 선택하세요.', flush=True)
                 if 0 < step < len(targets):
                     next_click = time.monotonic() + random.uniform(GAP_MIN, GAP_MAX)
                 else:
@@ -152,7 +153,7 @@ def run(background, max_points=2):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--background', action='store_true', help='마우스 이동 없이 X11 창에 이벤트 전송')
-    parser.add_argument('--points', type=int, default=2, help='F8로 지정할 클릭 위치 개수 (기본 2)')
+    parser.add_argument('--points', type=int, default=2, help='1번 키로 지정할 클릭 위치 개수 (기본 2)')
     args = parser.parse_args()
     if args.points < 1:
         parser.error('--points는 1 이상이어야 합니다.')
